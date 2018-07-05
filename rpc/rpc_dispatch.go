@@ -10,14 +10,21 @@ import (
 	"encoding/json"
 	"strconv"
 	"strings"
+	"eosgo-client/errors"
 )
 
 func TChainConfig() {
-
 	uri := "E:/goworkspace/helloword/src/main/eos.conf"
 	fmt.Println("loading config file: " + uri)
 	file, _ := os.Open(uri)
 	common.ConfigInit(file)
+}
+
+func init() {
+	// 1、初始化配置文件
+	if common.Config.API_URL == "" {
+		TChainConfig()
+	}
 }
 
 func CreateAccount() {
@@ -98,6 +105,76 @@ func RpcPushTransaction() {
 	}
 }
 
+func DoWalletCreate() (string, string, *errors.AppError){
+
+	wallet := common.ToolsWalletGenerateName("eosgowallet")
+	priv_key, err := WalletCreate(wallet)
+	return wallet, priv_key, err
+}
+
+func DoWalletOpen(wallet string) {
+	fmt.Println("opening wallet: ", wallet)
+	err := WalletOpen(wallet)
+	fmt.Println("err: ", err)
+	}
+
+func DoWalletUnlock(wallet string, privKey string) {
+
+	fmt.Println("wallet: ", wallet)
+	err := WalletUnlock(wallet, privKey)
+	fmt.Println("err: ", err)
+	}
+
+// TODO: the following test requires to manually create accounts and keys
+// TODO: some keys are hardcoded
+// TODO: it will soon be updated to be standalone
+func DoWalletImportKey(wallet string,priv_key string) (*errors.AppError){
+
+	err := WalletImportKey(wallet, priv_key)
+	fmt.Println("err: ", err)
+	return err
+	}
+
+
+func GetAccount(accountName string)(*model.Account, *errors.AppError){
+	account, err := ChainGetAccount(accountName)
+	return account, err
+}
+
+func httpPostForm(url string,reqbody string) ([]byte, error){
+	//创建请求
+	postReq, err := http.NewRequest("POST",
+		"http://baidu.com", //post链接
+		strings.NewReader(reqbody)) //post内容
+
+	if err != nil {
+		fmt.Println("POST请求:创建请求失败", err)
+		return []byte(""), err
+	}
+
+	//增加header
+	postReq.Header.Set("Content-Type", "application/json; encoding=utf-8")
+
+	//执行请求
+	client := &http.Client{}
+	resp, err := client.Do(postReq)
+	body := []byte("")
+	if err != nil {
+		fmt.Println("POST请求:创建请求失败", err)
+		return []byte(""), err
+	} else {
+		//读取响应
+		body, err := ioutil.ReadAll(resp.Body) //此处可增加输入过滤
+		if err != nil {
+			fmt.Println("POST请求:读取body失败", err)
+			return []byte(""), err
+		}
+
+		fmt.Println("POST请求:创建成功", string(body))
+	}
+	defer resp.Body.Close()
+	return body, err
+}
 
 func BuyRam() {
 
@@ -215,40 +292,4 @@ func BuyRam() {
 			fmt.Println("transaction id: ", trxPushed.ID)
 		}
 	}
-}
-
-
-func httpPostForm(url string,reqbody string) ([]byte, error){
-	//创建请求
-	postReq, err := http.NewRequest("POST",
-		"http://baidu.com", //post链接
-		strings.NewReader(reqbody)) //post内容
-
-	if err != nil {
-		fmt.Println("POST请求:创建请求失败", err)
-		return []byte(""), err
-	}
-
-	//增加header
-	postReq.Header.Set("Content-Type", "application/json; encoding=utf-8")
-
-	//执行请求
-	client := &http.Client{}
-	resp, err := client.Do(postReq)
-	body := []byte("")
-	if err != nil {
-		fmt.Println("POST请求:创建请求失败", err)
-		return []byte(""), err
-	} else {
-		//读取响应
-		body, err := ioutil.ReadAll(resp.Body) //此处可增加输入过滤
-		if err != nil {
-			fmt.Println("POST请求:读取body失败", err)
-			return []byte(""), err
-		}
-
-		fmt.Println("POST请求:创建成功", string(body))
-	}
-	defer resp.Body.Close()
-	return body, err
 }
